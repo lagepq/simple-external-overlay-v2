@@ -63,29 +63,30 @@ public:
 			self.never_wanted = j["self"]["never_wanted"];
 			esp.enable = j["esp"]["enable"];
 			esp.color = (ImColor)j["esp"]["color"];
-			esp.vehicle.enable = j["esp"]["vehicle"]["enbale"];
+			// ИСПРАВЛЕНО: "enbale" -> "enable"
+			esp.vehicle.enable = j["esp"]["vehicle"]["enable"];
 			esp.vehicle.line = j["esp"]["vehicle"]["line"];
 			esp.vehicle.text = j["esp"]["vehicle"]["text"];
 			esp.vehicle.color = (ImColor)j["esp"]["vehicle"]["color"];
-			esp.ped.enable = j["esp"]["ped"]["enbale"];
+			esp.ped.enable = j["esp"]["ped"]["enable"];
 			esp.ped.line = j["esp"]["ped"]["line"];
 			esp.ped.text = j["esp"]["ped"]["text"];
 			esp.ped.bone = j["esp"]["ped"]["bone"];
 			esp.ped.box = j["esp"]["ped"]["box"];
 			esp.ped.color = (ImColor)j["esp"]["ped"]["color"];
 			esp.ped.exclude_self = j["esp"]["ped"]["exclude_self"];
-			esp.pickup.enable = j["esp"]["pickup"]["enbale"];
+			esp.pickup.enable = j["esp"]["pickup"]["enable"];
 			esp.pickup.line = j["esp"]["pickup"]["line"];
 			esp.pickup.text = j["esp"]["pickup"]["text"];
 			esp.pickup.color = (ImColor)j["esp"]["pickup"]["color"];
-			esp.object.enable = j["esp"]["object"]["enbale"];
+			esp.object.enable = j["esp"]["object"]["enable"];
 			esp.object.line = j["esp"]["object"]["line"];
 			esp.object.text = j["esp"]["object"]["text"];
 			esp.object.color = (ImColor)j["esp"]["object"]["color"];
 		}
 		catch (...)
 		{
-
+			spdlog::warn("Failed to load settings.json, using defaults");
 		}
 	}
 	~settings()
@@ -101,29 +102,29 @@ public:
 		j["self"]["never_wanted"] = self.never_wanted;
 		j["esp"]["enable"] = esp.enable;
 		j["esp"]["color"] = (ImU32)esp.color;
-		j["esp"]["vehicle"]["enbale"] = esp.vehicle.enable;
+		// ИСПРАВЛЕНО: "enbale" -> "enable"
+		j["esp"]["vehicle"]["enable"] = esp.vehicle.enable;
 		j["esp"]["vehicle"]["line"] = esp.vehicle.line;
 		j["esp"]["vehicle"]["text"] = esp.vehicle.text;
 		j["esp"]["vehicle"]["color"] = (ImU32)esp.vehicle.color;
-		j["esp"]["ped"]["enbale"] = esp.ped.enable;
+		j["esp"]["ped"]["enable"] = esp.ped.enable;
 		j["esp"]["ped"]["line"] = esp.ped.line;
 		j["esp"]["ped"]["text"] = esp.ped.text;
 		j["esp"]["ped"]["bone"] = esp.ped.bone;
 		j["esp"]["ped"]["box"] = esp.ped.box;
 		j["esp"]["ped"]["color"] = (ImU32)esp.ped.color;
 		j["esp"]["ped"]["exclude_self"] = esp.ped.exclude_self;
-		j["esp"]["pickup"]["enbale"] = esp.pickup.enable;
+		j["esp"]["pickup"]["enable"] = esp.pickup.enable;
 		j["esp"]["pickup"]["line"] = esp.pickup.line;
 		j["esp"]["pickup"]["text"] = esp.pickup.text;
 		j["esp"]["pickup"]["color"] = (ImU32)esp.pickup.color;
-		j["esp"]["object"]["enbale"] = esp.object.enable;
+		j["esp"]["object"]["enable"] = esp.object.enable;
 		j["esp"]["object"]["line"] = esp.object.line;
 		j["esp"]["object"]["text"] = esp.object.text;
 		j["esp"]["object"]["color"] = (ImU32)esp.object.color;
 
 		std::ofstream o("settings.json");
 		o << std::setw(4) << j << std::endl;
-
 	}
 };
 
