@@ -795,7 +795,7 @@ void esp_window()
     {
         for (const auto& veh : state.vehicles)
         {
-            if (!veh.is_valid()) continue;
+            if (!veh.is_valid) continue;
 
             // Удалены ссылки на g_settings->esp.vehicle.ignore_self (не существует)
             // Удалены ссылки на g_settings->esp.vehicle.box (не существует)
@@ -835,7 +835,7 @@ void esp_window()
     {
         for (const auto& ped : state.peds)
         {
-            if (!ped.is_valid()) continue;
+            if (!ped.is_valid) continue;
             if (ped.instance == state.self_ped) continue;
 
             // Удалены ссылки на g_settings->esp.ped.max_distance (не существует)
@@ -881,7 +881,7 @@ void esp_window()
     {
         for (const auto& pickup : state.pickups)
         {
-            if (!pickup.is_valid()) continue;
+            if (!pickup.is_valid) continue;
 
             Vector3 screen;
             if (!WorldToScreen(pickup.world_coords, screen, (float*)matrix, w, h))
@@ -912,7 +912,7 @@ void esp_window()
         // Только близкие объекты (иначе будет лаг от 2300 объектов)
         for (const auto& obj : state.objects)
         {
-            if (!obj.is_valid()) continue;
+            if (!obj.is_valid) continue;
             if (!obj.text.has_text_data) continue; // Только те, для которых обновлен текст
             if (obj.text.dist > 100.0f) continue; // Только близкие
 

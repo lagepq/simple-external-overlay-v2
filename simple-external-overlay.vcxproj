@@ -193,7 +193,7 @@
     <ClCompile Include="src\functions\main_thread.cpp" />
     <ClCompile Include="src\functions\update_esp_data_thread.cpp" />
     <ClCompile Include="src\functions\trigger_bot_thread.cpp" />
-    <ClCompile Include="src\game_state.hpp" />
+    <ClInclude Include="src\game_state.hpp" />
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
