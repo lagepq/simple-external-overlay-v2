@@ -775,256 +775,156 @@ void main_window()
 
 void esp_window()
 {
-    if (g_settings->esp.enable)
+    if (!g_settings->esp.enable) return;
+
+    // Получаем snapshot игры
+    const GameState& state = g_game_state.get_read_buffer();
+
+    // Быстрый доступ к данным
+    const float* matrix = state.view_matrix;
+    int w = state.screen_width;
+    int h = state.screen_height;
+
+    auto draw_list = ImGui::GetBackgroundDrawList();
+
+    // === DEBUG INFO ===
+    // Удалены ссылки на g_settings->esp.show_debug_info (не существует)
+
+    // === VEHICLES ===
+    if (g_settings->esp.vehicle.enable)
     {
-        // FOV CIRCLE для aimbot
-        if (g_settings->weapon.aimbot && g_settings->aimbot_advanced.show_fov)
+        for (const auto& veh : state.vehicles)
         {
-            ImVec2 center(esp_game_width / 2.0f, esp_game_height / 2.0f);
-            ImGui::GetBackgroundDrawList()->AddCircle(center, g_settings->aimbot_advanced.fov_size, g_settings->aimbot_advanced.fov_color, 64, 2.0f);
-        }
+            if (!veh.is_valid()) continue;
 
-        ImGui::GetBackgroundDrawList()->AddText({ 10, (float)esp_game_height / 2 - 2 * 13 }, g_settings->esp.color, std::format("Vehicle: {}\nPed    : {}\nPickup : {}\nObject : {}\nFPS    : {:.1f}", esp_num_vehicle, esp_num_ped, esp_num_pickup, esp_num_object, ImGui::GetIO().Framerate).c_str());
-        if (g_settings->esp.vehicle.enable)
-        {
-            for (int i = 0; i < sizeof(esp_vehicle.item) / sizeof(esp_vehicle.item[0]); i++)
+            // Удалены ссылки на g_settings->esp.vehicle.ignore_self (не существует)
+            // Удалены ссылки на g_settings->esp.vehicle.box (не существует)
+
+            Vector3 screen;
+            if (!WorldToScreen(veh.world_coords, screen, (float*)matrix, w, h))
+                continue;
+
+            // Линия от низа экрана
+            if (g_settings->esp.vehicle.line)
             {
-                if (esp_vehicle.item[i].instance)
-                {
-                    Vector3 image_coords;
-                    Vector3 world_coords_2 = esp_vehicle.item[i].world_coords; world_coords_2.z += 1;
-                    Vector3 image_coords_2;
-                    if (WorldToScreen(esp_vehicle.item[i].world_coords, image_coords, esp_matirx, esp_game_width, esp_game_height) && WorldToScreen(world_coords_2, image_coords_2, esp_matirx, esp_game_width, esp_game_height))
-                    {
-                        int box_height = (int)((image_coords.y - image_coords_2.y) * 2);
-                        int box_width = (int)(box_height / 2.4);
-                        if (g_settings->esp.vehicle.line)
-                        {
-                            ImGui::GetBackgroundDrawList()->AddLine({ (float)esp_game_width / 2, 0 }, { image_coords.x, image_coords.y }, g_settings->esp.vehicle.color);
-                        }
-                        if (g_settings->esp.vehicle.text)
-                        {
-                            ImGui::GetBackgroundDrawList()->AddText({ image_coords.x + box_width, image_coords.y }, g_settings->esp.vehicle.color, std::format("dist: {:.2f}\nhash: {}\nname: {}\nname: {}", esp_vehicle.item[i].text.dist, esp_vehicle.item[i].text.hash, esp_vehicle.item[i].text.name_1, esp_vehicle.item[i].text.name_2).c_str());
-                        }
-                    }
-                }
+                draw_list->AddLine(
+                    ImVec2((float)w / 2, (float)h),
+                    ImVec2(screen.x, screen.y),
+                    IM_COL32_WHITE,
+                    1.0f
+                );
+            }
+
+            // Текст
+            if (g_settings->esp.vehicle.text && veh.text.has_text_data)
+            {
+                std::string text = std::format("{} [{:.0f}m]",
+                    veh.name_1, veh.text.dist);
+
+                draw_list->AddText(
+                    ImVec2(screen.x + 10, screen.y),
+                    IM_COL32_WHITE,
+                    text.c_str()
+                );
             }
         }
-        if (g_settings->esp.ped.enable)
+    }
+
+    // === PEDS ===
+    if (g_settings->esp.ped.enable)
+    {
+        for (const auto& ped : state.peds)
         {
-            for (int i = 0; i < sizeof(esp_ped.item) / sizeof(esp_ped.item[0]); i++)
+            if (!ped.is_valid()) continue;
+            if (ped.instance == state.self_ped) continue;
+
+            // Удалены ссылки на g_settings->esp.ped.max_distance (не существует)
+            // Используем вместо этого g_settings->esp.display.max_distance
+            if (ped.text.dist > g_settings->esp.display.max_distance)
+                continue;
+
+            Vector3 screen;
+            if (!WorldToScreen(ped.world_coords, screen, (float*)matrix, w, h))
+                continue;
+
+            ImU32 color = IM_COL32(255, 0, 0, 255);
+            if (ped.text.has_text_data && ped.ped_data.ped_type == 1)
+                color = IM_COL32(255, 255, 0, 255);
+
+            // Рисуем основной элемент
+            if (g_settings->esp.ped.line)
             {
-                if (esp_ped.item[i].instance)
-                {
-                    if (g_settings->esp.ped.exclude_self && esp_ped.item[i].instance == esp_self.instance) continue;
-                    Vector3 image_coords;
-                    Vector3 world_coords_2 = esp_ped.item[i].world_coords; world_coords_2.z += 1;
-                    Vector3 image_coords_2;
-                    if (WorldToScreen(esp_ped.item[i].world_coords, image_coords, esp_matirx, esp_game_width, esp_game_height) && WorldToScreen(world_coords_2, image_coords_2, esp_matirx, esp_game_width, esp_game_height))
-                    {
-                        int box_height = (int)((image_coords.y - image_coords_2.y) * 2);
-                        int box_width = (int)(box_height / 2.4);
+                draw_list->AddLine(
+                    ImVec2((float)w / 2, (float)h),
+                    ImVec2(screen.x, screen.y),
+                    color,
+                    1.0f
+                );
+            }
 
-                        // Calculate opacity based on distance
-                        float opacity = 1.0f;
-                        if (g_settings->esp.display.distance_fade)
-                        {
-                            float dist = esp_ped.item[i].text.dist;
-                            if (dist > g_settings->esp.display.max_distance)
-                                continue; // Skip if too far
-                            opacity = 1.0f - (dist / g_settings->esp.display.max_distance);
-                            opacity = opacity < 0.2f ? 0.2f : opacity; // Min 20% opacity
-                        }
+            if (g_settings->esp.ped.text && ped.text.has_text_data)
+            {
+                std::string text = std::format("HP: {:.0f} [{:.0f}m]",
+                    ped.ped_data.health, ped.text.dist);
 
-                        ImU32 color_with_opacity = ImColor(
-                            g_settings->esp.ped.color.Value.x,
-                            g_settings->esp.ped.color.Value.y,
-                            g_settings->esp.ped.color.Value.z,
-                            opacity
-                        );
-
-                        // SNAPLINES - different positions
-                        if (g_settings->esp.ped.line)
-                        {
-                            ImVec2 start_pos;
-                            if (g_settings->esp.display.snapline_position == 0) // Top
-                                start_pos = { (float)esp_game_width / 2, 0 };
-                            else if (g_settings->esp.display.snapline_position == 1) // Center
-                                start_pos = { (float)esp_game_width / 2, (float)esp_game_height / 2 };
-                            else // Bottom
-                                start_pos = { (float)esp_game_width / 2, (float)esp_game_height };
-
-                            ImGui::GetBackgroundDrawList()->AddLine(start_pos, { image_coords.x, image_coords.y }, color_with_opacity);
-                        }
-
-                        // TEXT
-                        if (g_settings->esp.ped.text)
-                        {
-                            ImGui::GetBackgroundDrawList()->AddText({ image_coords.x + box_width, image_coords.y }, color_with_opacity, std::format("dist    : {:.2f}\nhash    : {}\nhealth  : {}\nped type: {}", esp_ped.item[i].text.dist, esp_ped.item[i].text.hash, esp_ped.item[i].text.health, esp_ped.item[i].text.ped_type).c_str());
-                        }
-
-                        // HEALTH BAR
-                        if (g_settings->esp.ped.health_bar && esp_ped.item[i].text.health > 0)
-                        {
-                            float health_percent = esp_ped.item[i].text.health / 200.0f; // Max HP = 200
-                            if (health_percent > 1.0f) health_percent = 1.0f;
-
-                            int bar_width = box_width * 2;
-                            int bar_height = 6;
-                            int bar_x = image_coords.x - box_width;
-                            int bar_y = image_coords.y - box_height - bar_height - 2;
-
-                            // Background
-                            ImGui::GetBackgroundDrawList()->AddRectFilled(
-                                { (float)bar_x, (float)bar_y },
-                                { (float)(bar_x + bar_width), (float)(bar_y + bar_height) },
-                                ImColor(0, 0, 0, (int)(180 * opacity))
-                            );
-
-                            // Health bar color (green to red based on HP)
-                            ImColor health_color;
-                            if (health_percent > 0.6f)
-                                health_color = ImColor(0, 255, 0, (int)(255 * opacity)); // Green
-                            else if (health_percent > 0.3f)
-                                health_color = ImColor(255, 255, 0, (int)(255 * opacity)); // Yellow
-                            else
-                                health_color = ImColor(255, 0, 0, (int)(255 * opacity)); // Red
-
-                            // Health fill
-                            ImGui::GetBackgroundDrawList()->AddRectFilled(
-                                { (float)bar_x, (float)bar_y },
-                                { (float)(bar_x + bar_width * health_percent), (float)(bar_y + bar_height) },
-                                health_color
-                            );
-
-                            // Border
-                            ImGui::GetBackgroundDrawList()->AddRect(
-                                { (float)bar_x, (float)bar_y },
-                                { (float)(bar_x + bar_width), (float)(bar_y + bar_height) },
-                                ImColor(255, 255, 255, (int)(255 * opacity))
-                            );
-                        }
-
-                        // BOX - different styles
-                        if (g_settings->esp.ped.box)
-                        {
-                            if (g_settings->esp.display.box_style == 0) // Full box
-                            {
-                                ImGui::GetBackgroundDrawList()->AddRect(
-                                    { image_coords.x - box_width, image_coords.y - box_height },
-                                    { image_coords.x + box_width, image_coords.y + box_height },
-                                    color_with_opacity, 0.0f, 0, 2.0f
-                                );
-                            }
-                            else if (g_settings->esp.display.box_style == 1) // Corners only
-                            {
-                                int corner_size = box_width / 3;
-                                // Top-left
-                                ImGui::GetBackgroundDrawList()->AddLine({ image_coords.x - box_width, image_coords.y - box_height }, { image_coords.x - box_width + corner_size, image_coords.y - box_height }, color_with_opacity, 2.0f);
-                                ImGui::GetBackgroundDrawList()->AddLine({ image_coords.x - box_width, image_coords.y - box_height }, { image_coords.x - box_width, image_coords.y - box_height + corner_size }, color_with_opacity, 2.0f);
-                                // Top-right
-                                ImGui::GetBackgroundDrawList()->AddLine({ image_coords.x + box_width, image_coords.y - box_height }, { image_coords.x + box_width - corner_size, image_coords.y - box_height }, color_with_opacity, 2.0f);
-                                ImGui::GetBackgroundDrawList()->AddLine({ image_coords.x + box_width, image_coords.y - box_height }, { image_coords.x + box_width, image_coords.y - box_height + corner_size }, color_with_opacity, 2.0f);
-                                // Bottom-left
-                                ImGui::GetBackgroundDrawList()->AddLine({ image_coords.x - box_width, image_coords.y + box_height }, { image_coords.x - box_width + corner_size, image_coords.y + box_height }, color_with_opacity, 2.0f);
-                                ImGui::GetBackgroundDrawList()->AddLine({ image_coords.x - box_width, image_coords.y + box_height }, { image_coords.x - box_width, image_coords.y + box_height - corner_size }, color_with_opacity, 2.0f);
-                                // Bottom-right
-                                ImGui::GetBackgroundDrawList()->AddLine({ image_coords.x + box_width, image_coords.y + box_height }, { image_coords.x + box_width - corner_size, image_coords.y + box_height }, color_with_opacity, 2.0f);
-                                ImGui::GetBackgroundDrawList()->AddLine({ image_coords.x + box_width, image_coords.y + box_height }, { image_coords.x + box_width, image_coords.y + box_height - corner_size }, color_with_opacity, 2.0f);
-                            }
-                            else if (g_settings->esp.display.box_style == 2) // 3D box (simple)
-                            {
-                                // Draw 2 rectangles slightly offset for 3D effect
-                                ImGui::GetBackgroundDrawList()->AddRect(
-                                    { image_coords.x - box_width - 2, image_coords.y - box_height - 2 },
-                                    { image_coords.x + box_width - 2, image_coords.y + box_height - 2 },
-                                    color_with_opacity, 0.0f, 0, 1.5f
-                                );
-                                ImGui::GetBackgroundDrawList()->AddRect(
-                                    { image_coords.x - box_width, image_coords.y - box_height },
-                                    { image_coords.x + box_width, image_coords.y + box_height },
-                                    color_with_opacity, 0.0f, 0, 2.0f
-                                );
-                            }
-                        }
-
-                        // BONE
-                        if (g_settings->esp.ped.bone)
-                        {
-                            Vector3 image_coords_3[9];
-                            if (WorldToScreen(esp_ped.item[i].bone[0].world_coords, image_coords_3[0], esp_matirx, esp_game_width, esp_game_height) &&
-                                WorldToScreen(esp_ped.item[i].bone[1].world_coords, image_coords_3[1], esp_matirx, esp_game_width, esp_game_height) &&
-                                WorldToScreen(esp_ped.item[i].bone[2].world_coords, image_coords_3[2], esp_matirx, esp_game_width, esp_game_height) &&
-                                WorldToScreen(esp_ped.item[i].bone[3].world_coords, image_coords_3[3], esp_matirx, esp_game_width, esp_game_height) &&
-                                WorldToScreen(esp_ped.item[i].bone[4].world_coords, image_coords_3[4], esp_matirx, esp_game_width, esp_game_height) &&
-                                WorldToScreen(esp_ped.item[i].bone[5].world_coords, image_coords_3[5], esp_matirx, esp_game_width, esp_game_height) &&
-                                WorldToScreen(esp_ped.item[i].bone[6].world_coords, image_coords_3[6], esp_matirx, esp_game_width, esp_game_height) &&
-                                WorldToScreen(esp_ped.item[i].bone[7].world_coords, image_coords_3[7], esp_matirx, esp_game_width, esp_game_height) &&
-                                WorldToScreen(esp_ped.item[i].bone[8].world_coords, image_coords_3[8], esp_matirx, esp_game_width, esp_game_height))
-                            {
-                                ImGui::GetBackgroundDrawList()->AddLine({ image_coords_3[Bone::Head].x, image_coords_3[Bone::Head].y }, { image_coords_3[Bone::Neck].x, image_coords_3[Bone::Neck].y }, g_settings->esp.ped.color);
-                                ImGui::GetBackgroundDrawList()->AddLine({ image_coords_3[Bone::Neck].x, image_coords_3[Bone::Neck].y }, { image_coords_3[Bone::LeftHand].x, image_coords_3[Bone::LeftHand].y }, g_settings->esp.ped.color);
-                                ImGui::GetBackgroundDrawList()->AddLine({ image_coords_3[Bone::Neck].x, image_coords_3[Bone::Neck].y }, { image_coords_3[Bone::RightHand].x, image_coords_3[Bone::RightHand].y }, g_settings->esp.ped.color);
-                                ImGui::GetBackgroundDrawList()->AddLine({ image_coords_3[Bone::Neck].x, image_coords_3[Bone::Neck].y }, { image_coords_3[Bone::Abdomen].x, image_coords_3[Bone::Abdomen].y }, g_settings->esp.ped.color);
-                                ImGui::GetBackgroundDrawList()->AddLine({ image_coords_3[Bone::Abdomen].x, image_coords_3[Bone::Abdomen].y }, { image_coords_3[Bone::LeftAnkle].x, image_coords_3[Bone::LeftAnkle].y }, g_settings->esp.ped.color);
-                                ImGui::GetBackgroundDrawList()->AddLine({ image_coords_3[Bone::Abdomen].x, image_coords_3[Bone::Abdomen].y }, { image_coords_3[Bone::RightAnkle].x, image_coords_3[Bone::RightAnkle].y }, g_settings->esp.ped.color);
-                                ImGui::GetBackgroundDrawList()->AddLine({ image_coords_3[Bone::LeftAnkle].x, image_coords_3[Bone::LeftAnkle].y }, { image_coords_3[Bone::LeftToe].x, image_coords_3[Bone::LeftToe].y }, g_settings->esp.ped.color);
-                                ImGui::GetBackgroundDrawList()->AddLine({ image_coords_3[Bone::RightAnkle].x, image_coords_3[Bone::RightAnkle].y }, { image_coords_3[Bone::RightToe].x, image_coords_3[Bone::RightToe].y }, g_settings->esp.ped.color);
-                            }
-                        }
-                    }
-                }
+                draw_list->AddText(
+                    ImVec2(screen.x + 10, screen.y),
+                    IM_COL32_WHITE,
+                    text.c_str()
+                );
             }
         }
-        if (g_settings->esp.pickup.enable)
+    }
+
+    // === PICKUPS ===
+    if (g_settings->esp.pickup.enable)
+    {
+        for (const auto& pickup : state.pickups)
         {
-            for (int i = 0; i < sizeof(esp_pickup.item) / sizeof(esp_pickup.item[0]); i++)
+            if (!pickup.is_valid()) continue;
+
+            Vector3 screen;
+            if (!WorldToScreen(pickup.world_coords, screen, (float*)matrix, w, h))
+                continue;
+
+            // Рисуем маркер
+            draw_list->AddCircleFilled(
+                ImVec2(screen.x, screen.y),
+                5.0f,
+                IM_COL32(255, 255, 0, 255)
+            );
+
+            if (g_settings->esp.pickup.text && pickup.text.has_text_data)
             {
-                if (esp_pickup.item[i].instance)
-                {
-                    Vector3 image_coords;
-                    Vector3 world_coords_2 = esp_pickup.item[i].world_coords; world_coords_2.z += 1;
-                    Vector3 image_coords_2;
-                    if (WorldToScreen(esp_pickup.item[i].world_coords, image_coords, esp_matirx, esp_game_width, esp_game_height) && WorldToScreen(world_coords_2, image_coords_2, esp_matirx, esp_game_width, esp_game_height))
-                    {
-                        int box_height = (int)((image_coords.y - image_coords_2.y) * 2);
-                        int box_width = (int)(box_height / 2.4);
-                        if (g_settings->esp.pickup.line)
-                        {
-                            ImGui::GetBackgroundDrawList()->AddLine({ (float)esp_game_width / 2, 0 }, { image_coords.x, image_coords.y }, g_settings->esp.pickup.color);
-                        }
-                        if (g_settings->esp.pickup.text)
-                        {
-                            ImGui::GetBackgroundDrawList()->AddText({ image_coords.x + box_width, image_coords.y }, g_settings->esp.pickup.color, std::format("dist: {:.2f}\nhash: {}", esp_pickup.item[i].text.dist, esp_pickup.item[i].text.hash).c_str());
-                        }
-                    }
-                }
+                std::string text = std::format("Pickup | {:.0f}m", pickup.text.dist);
+                draw_list->AddText(
+                    ImVec2(screen.x + 10, screen.y),
+                    IM_COL32(255, 255, 255, 255),
+                    text.c_str()
+                );
             }
         }
-        if (g_settings->esp.object.enable)
+    }
+
+    // === OBJECTS (аналогично) ===
+    if (g_settings->esp.object.enable)
+    {
+        // Только близкие объекты (иначе будет лаг от 2300 объектов)
+        for (const auto& obj : state.objects)
         {
-            for (int i = 0; i < sizeof(esp_object.item) / sizeof(esp_object.item[0]); i++)
-            {
-                if (esp_object.item[i].instance)
-                {
-                    Vector3 image_coords;
-                    Vector3 world_coords_2 = esp_object.item[i].world_coords; world_coords_2.z += 1;
-                    Vector3 image_coords_2;
-                    if (WorldToScreen(esp_object.item[i].world_coords, image_coords, esp_matirx, esp_game_width, esp_game_height) && WorldToScreen(world_coords_2, image_coords_2, esp_matirx, esp_game_width, esp_game_height))
-                    {
-                        int box_height = (int)((image_coords.y - image_coords_2.y) * 2);
-                        int box_width = (int)(box_height / 2.4);
-                        if (g_settings->esp.object.line)
-                        {
-                            ImGui::GetBackgroundDrawList()->AddLine({ (float)esp_game_width / 2, 0 }, { image_coords.x, image_coords.y }, g_settings->esp.object.color);
-                        }
-                        if (g_settings->esp.object.text)
-                        {
-                            ImGui::GetBackgroundDrawList()->AddText({ image_coords.x + box_width, image_coords.y }, g_settings->esp.object.color, std::format("dist: {:.2f}\nhash: {}", esp_object.item[i].text.dist, esp_object.item[i].text.hash).c_str());
-                        }
-                    }
-                }
-            }
+            if (!obj.is_valid()) continue;
+            if (!obj.text.has_text_data) continue; // Только те, для которых обновлен текст
+            if (obj.text.dist > 100.0f) continue; // Только близкие
+
+            Vector3 screen;
+            if (!WorldToScreen(obj.world_coords, screen, (float*)matrix, w, h))
+                continue;
+
+            draw_list->AddCircle(
+                ImVec2(screen.x, screen.y),
+                3.0f,
+                IM_COL32(128, 128, 128, 255)
+            );
         }
     }
 }

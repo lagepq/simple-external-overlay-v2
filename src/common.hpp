@@ -1,5 +1,7 @@
 #pragma once
+
 #include <iostream>
+#define NOMINMAX
 #include <Windows.h>
 #include <Psapi.h>
 #include <vector>
@@ -31,77 +33,8 @@ inline uintptr_t camGameplayDirectorPointer;
 inline uintptr_t CNetworkPlayerMgrPointer;
 inline uintptr_t AimCPedPointer;
 
-inline float esp_matirx[16];
-inline int esp_game_width;
-inline int esp_game_height;
-inline int esp_num_vehicle;
-inline int esp_num_ped;
-inline int esp_num_pickup;
-inline int esp_num_object;
-
-struct esp_self_ {
-	uintptr_t instance;
-	Vector3 world_coords;
-};
-inline esp_self_ esp_self;
-
-struct esp_vehicle_ {
-	struct {
-		uintptr_t instance;
-		Vector3 world_coords;
-		struct {
-			float dist;
-			uint32_t hash;
-			char name_1[20];
-			char name_2[20];
-		}text;
-	}item[300];
-};
-inline esp_vehicle_ esp_vehicle;
-
-struct esp_ped_ {
-	struct {
-		uintptr_t instance;
-		Vector3 world_coords;
-		struct {
-			float dist;
-			uint32_t hash;
-			float health;
-			uint32_t ped_type;
-		}text;
-		struct {
-			Vector3 model_coords;
-			Vector3 world_coords;
-		}bone[9];
-	}item[256];
-};
-inline esp_ped_ esp_ped;
-
-struct esp_pickup_ {
-	struct {
-		uintptr_t instance;
-		Vector3 world_coords;
-		struct {
-			float dist;
-			uint32_t hash;
-		}text;
-	}item[73];
-};
-inline esp_pickup_ esp_pickup;
-
-struct esp_object_ {
-	struct {
-		uintptr_t instance;
-		Vector3 world_coords;
-		struct {
-			float dist;
-			uint32_t hash;
-		}text;
-	}item[2300];
-};
-inline esp_object_ esp_object;
-
 #include "util/misc.hpp"
+#include "game_state.hpp"
 #include "settings.hpp"
 #include "signature.hpp"
 #include "functions/functions.hpp"
