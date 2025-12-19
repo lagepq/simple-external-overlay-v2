@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <thread>
 #include <fstream>
+#include <chrono>
 
 #include "imgui.h"
 #include "imgui_impl_win32.h"
@@ -29,6 +30,7 @@ inline uintptr_t ReplayInterfacePointer;
 inline uintptr_t CPedFactoryPointer;
 inline uintptr_t CViewportGamePointer;
 inline uintptr_t WindowWidth;
+inline uintptr_t WindowHeight;
 inline uintptr_t camGameplayDirectorPointer;
 inline uintptr_t CNetworkPlayerMgrPointer;
 inline uintptr_t AimCPedPointer;

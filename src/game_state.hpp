@@ -3,6 +3,7 @@
 #include <atomic>
 #include <chrono>
 #include "types.hpp"
+#include "common.hpp"
 
 // Snapshot одной сущности
 struct EntitySnapshot {
